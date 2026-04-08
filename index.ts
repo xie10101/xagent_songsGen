@@ -1,21 +1,22 @@
 // 加载环境变量
-import "dotenv/config";
+import { env } from "./config.ts";
+const { OPENAI_API_KEY, OPENAI_API_BASE, MAX_TOKEN } = env;
+
+
 // 导入 OpenAI SDK
 import OpenAI from "openai";
 
 // 初始化客户端（全局只需要初始化一次）
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_API_BASE,
+  apiKey: OPENAI_API_KEY,
+  baseURL: OPENAI_API_BASE,
 });
 /**
- *   尝试使用不同的大模型 
- *   
+ *   尝试使用不同的大模型   
  */
-
 // 最简单的对话调用 = Agent 的核心基础
 async function simpleChat() {
-  const completion = await openai.chat.completions.create({
+  const stream = await openai.chat.completions.create({
     model: "kimi-k2.5", // 便宜又好用，入门首选
     messages: [
       // 系统提示词 = Agent 的“角色设定”
@@ -23,10 +24,17 @@ async function simpleChat() {
       // 用户输入
       { role: "user", content: "你好，请简单介绍自己" },
     ],
+      max_tokens: Number(MAX_TOKEN)|| 1024, 
+      stream: true,
   });
 
   // 输出结果
-  console.log("🤖 Agent 回答：", completion?.choices?.[0]?.message?.content || "无回复");
+  // console.log("🤖 Agent 回答：", completion?.choices?.[0]?.message?.content || "无回复");
+// 像水流一样处理每一个数据片段 (Chunk)
+  for await (const chunk of stream) {
+    const content = chunk.choices[0]?.delta?.content || "";
+    process.stdout.write(content); // 在终端实时输出
+  }
 }
 
 /**
@@ -39,4 +47,6 @@ async function simpleChat() {
 
 
 // 运行
-simpleChat();
+// simpleChat();
+
+console.log(MAX_TOKEN);
